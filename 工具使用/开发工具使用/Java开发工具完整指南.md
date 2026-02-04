@@ -1576,3 +1576,770 @@ docker --version
 ```
 
 **常用命令**
+
+```bash
+# 镜像操作
+docker images                    # 查看镜像
+docker pull <image>              # 拉取镜像
+docker build -t <name> .         # 构建镜像
+docker rmi <image>               # 删除镜像
+docker tag <image> <new-name>    # 标记镜像
+
+# 容器操作
+docker ps                        # 查看运行中的容器
+docker ps -a                     # 查看所有容器
+docker run <image>               # 运行容器
+docker start <container>         # 启动容器
+docker stop <container>          # 停止容器
+docker restart <container>       # 重启容器
+docker rm <container>            # 删除容器
+docker logs <container>          # 查看日志
+docker exec -it <container> bash # 进入容器
+
+# 网络操作
+docker network ls                # 查看网络
+docker network create <name>     # 创建网络
+docker network connect <network> <container>  # 连接网络
+
+# 数据卷操作
+docker volume ls                 # 查看数据卷
+docker volume create <name>      # 创建数据卷
+docker volume rm <name>          # 删除数据卷
+```
+
+#### 最佳实践
+
+**1. Dockerfile 编写**
+
+```dockerfile
+# 多阶段构建
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
+
+# 添加非 root 用户
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+
+# 暴露端口
+EXPOSE 8080
+
+# 启动命令
+ENTRYPOINT ["java", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-jar", "app.jar"]
+```
+
+**2. docker-compose.yml**
+
+```yaml
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: mydb
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    command: redis-server --appendonly yes
+
+  # Spring Boot 应用
+  app:
+    build: .
+    container_name: spring-app
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mydb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - app-network
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  app-network:
+    driver: bridge
+```
+
+**3. 常用命令组合**
+
+```bash
+# 构建并启动
+docker-compose up -d --build
+
+# 查看日志
+docker-compose logs -f app
+
+# 停止并删除
+docker-compose down
+
+# 停止并删除（包括数据卷）
+docker-compose down -v
+
+# 重启服务
+docker-compose restart app
+
+# 进入容器
+docker-compose exec app bash
+```
+
+---
+
+### 10.2 Kubernetes
+
+#### 使用指南
+
+**安装 kubectl**
+```bash
+# macOS
+brew install kubectl
+
+# 验证
+kubectl version --client
+```
+
+**常用命令**
+```bash
+# 集群信息
+kubectl cluster-info
+kubectl get nodes
+
+# Pod 操作
+kubectl get pods
+kubectl get pods -n <namespace>
+kubectl describe pod <pod-name>
+kubectl logs <pod-name>
+kubectl logs -f <pod-name>
+kubectl exec -it <pod-name> -- bash
+
+# Deployment 操作
+kubectl get deployments
+kubectl create deployment <name> --image=<image>
+kubectl scale deployment <name> --replicas=3
+kubectl rollout status deployment/<name>
+kubectl rollout undo deployment/<name>
+
+# Service 操作
+kubectl get services
+kubectl expose deployment <name> --port=8080 --type=LoadBalancer
+
+# 配置操作
+kubectl apply -f <file.yaml>
+kubectl delete -f <file.yaml>
+kubectl get all
+```
+
+#### 最佳实践
+
+**1. Deployment 配置**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-app
+  labels:
+    app: spring-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: spring-app
+  template:
+    metadata:
+      labels:
+        app: spring-app
+    spec:
+      containers:
+      - name: spring-app
+        image: myregistry/spring-app:1.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: database.url
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secret
+              key: database.password
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-app-service
+spec:
+  selector:
+    app: spring-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
+```
+
+**2. ConfigMap 和 Secret**
+
+```yaml
+# ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  database.url: "jdbc:mysql://mysql:3306/mydb"
+  redis.host: "redis"
+  redis.port: "6379"
+
+---
+# Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secret
+type: Opaque
+data:
+  database.password: cm9vdDEyMw==  # base64 编码
+  redis.password: cmVkaXMxMjM=
+```
+
+---
+
+## 11. 监控工具
+
+### 11.1 Prometheus + Grafana
+
+#### 使用指南
+
+**Docker Compose 部署**
+
+```yaml
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  monitoring:
+    driver: bridge
+```
+
+**prometheus.yml 配置**
+
+```yaml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'spring-boot-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+```
+
+**Spring Boot 集成**
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-prometheus</artifactId>
+</dependency>
+```
+
+```yaml
+# application.yml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+```
+
+#### 最佳实践
+
+**1. Grafana 仪表板配置**
+
+```
+1. 访问 Grafana：http://localhost:3000
+2. 登录：admin/admin
+3. 添加数据源：Configuration → Data Sources → Add Prometheus
+   - URL: http://prometheus:9090
+4. 导入仪表板：
+   - JVM (Micrometer): 4701
+   - Spring Boot: 12900
+```
+
+**2. 自定义指标**
+
+```java
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.stereotype.Service;
+
+@Service
+public class OrderService {
+    
+    private final Counter orderCounter;
+    
+    public OrderService(MeterRegistry registry) {
+        this.orderCounter = Counter.builder("orders.created")
+            .description("订单创建数量")
+            .tag("type", "online")
+            .register(registry);
+    }
+    
+    public void createOrder(Order order) {
+        // 业务逻辑
+        orderCounter.increment();
+    }
+}
+```
+
+---
+
+### 11.2 ELK Stack（日志管理）
+
+#### 使用指南
+
+**Docker Compose 部署**
+
+```yaml
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      - elk
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: logstash
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+volumes:
+  es-data:
+
+networks:
+  elk:
+    driver: bridge
+```
+
+**Logback 配置**
+
+```xml
+<!-- logback-spring.xml -->
+<configuration>
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>localhost:5000</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"spring-app","env":"prod"}</customFields>
+        </encoder>
+    </appender>
+    
+    <root level="INFO">
+        <appender-ref ref="LOGSTASH" />
+    </root>
+</configuration>
+```
+
+---
+
+## 12. 文档工具
+
+### 12.1 Maven Site
+
+#### 使用指南
+
+**pom.xml 配置**
+
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-site-plugin</artifactId>
+            <version>4.0.0-M11</version>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-project-info-reports-plugin</artifactId>
+            <version>3.5.0</version>
+        </plugin>
+    </plugins>
+</build>
+
+<reporting>
+    <plugins>
+        <!-- Javadoc -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.6.3</version>
+        </plugin>
+        
+        <!-- 测试报告 -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-report-plugin</artifactId>
+            <version>3.2.3</version>
+        </plugin>
+        
+        <!-- 代码覆盖率 -->
+        <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.8.11</version>
+        </plugin>
+    </plugins>
+</reporting>
+```
+
+**生成文档**
+
+```bash
+# 生成站点
+mvn site
+
+# 查看文档
+open target/site/index.html
+```
+
+---
+
+### 12.2 Javadoc
+
+#### 使用指南
+
+**生成 Javadoc**
+
+```bash
+# Maven
+mvn javadoc:javadoc
+
+# Gradle
+gradle javadoc
+
+# 查看
+open target/site/apidocs/index.html
+```
+
+#### 最佳实践
+
+**1. 注释规范**
+
+```java
+/**
+ * 用户服务类
+ * <p>
+ * 提供用户相关的业务操作，包括用户查询、创建、更新和删除
+ * </p>
+ *
+ * @author erik.zhou
+ * @version 1.0.0
+ * @since 2024-01-01
+ */
+@Service
+public class UserService {
+    
+    /**
+     * 根据用户ID获取用户信息
+     *
+     * @param userId 用户ID，不能为空
+     * @return 用户信息
+     * @throws UserNotFoundException 当用户不存在时抛出
+     * @throws IllegalArgumentException 当用户ID为空时抛出
+     */
+    public User getUser(@NonNull Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("用户ID不能为空");
+        }
+        
+        return userRepository.findById(userId)
+            .orElseThrow(() -> new UserNotFoundException("用户不存在: " + userId));
+    }
+    
+    /**
+     * 创建新用户
+     *
+     * @param userDTO 用户信息DTO
+     * @return 创建成功的用户
+     * @see UserDTO
+     * @deprecated 使用 {@link #createUserV2(UserDTO)} 替代
+     */
+    @Deprecated
+    public User createUser(UserDTO userDTO) {
+        // ...
+    }
+}
+```
+
+---
+
+## 13. 工具链整合最佳实践
+
+### 13.1 开发环境配置
+
+**推荐工具组合**
+
+```
+IDE: IntelliJ IDEA Ultimate / VSCode
+构建: Maven 3.9+ / Gradle 8+
+版本控制: Git 2.40+
+数据库: DBeaver / DataGrip
+API 测试: Postman / Swagger UI
+容器: Docker Desktop
+监控: Prometheus + Grafana
+日志: ELK Stack
+```
+
+### 13.2 CI/CD 流程
+
+**GitLab CI 示例**
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - build
+  - test
+  - quality
+  - deploy
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+cache:
+  paths:
+    - .m2/repository
+
+build:
+  stage: build
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - mvn clean compile
+  artifacts:
+    paths:
+      - target/
+
+test:
+  stage: test
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - mvn test
+  artifacts:
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
+
+quality:
+  stage: quality
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - mvn sonar:sonar -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN
+  only:
+    - main
+
+deploy:
+  stage: deploy
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+  only:
+    - tags
+```
+
+---
+
+## 14. 总结
+
+### 14.1 工具选择建议
+
+| 场景 | 推荐工具 | 备选方案 |
+|------|----------|----------|
+| IDE | IntelliJ IDEA | VSCode + 扩展 |
+| 构建 | Maven | Gradle |
+| 版本控制 | Git | - |
+| 代码质量 | SonarQube | Checkstyle + SpotBugs |
+| 调试 | IDEA Debugger | Arthas |
+| 性能分析 | JProfiler | VisualVM |
+| 测试 | JUnit 5 + Mockito | TestNG |
+| 数据库 | DBeaver | DataGrip |
+| API 测试 | Postman | Swagger UI |
+| 容器 | Docker | Podman |
+| 监控 | Prometheus + Grafana | SkyWalking |
+| 日志 | ELK Stack | Loki |
+
+### 14.2 学习路径
+
+```
+1. 基础工具（1-2周）
+   - IDE 配置和快捷键
+   - Maven/Gradle 基本使用
+   - Git 常用命令
+
+2. 开发工具（2-3周）
+   - 调试技巧
+   - 单元测试
+   - API 测试
+
+3. 进阶工具（3-4周）
+   - 性能分析
+   - 代码质量检查
+   - 容器化部署
+
+4. 运维工具（4-6周）
+   - 监控告警
+   - 日志分析
+   - CI/CD 流程
+```
+
+---
+
+**文档版本**: v1.0  
+**最后更新**: 2026-02-04  
+**作者**: @author erik.zhou
+
