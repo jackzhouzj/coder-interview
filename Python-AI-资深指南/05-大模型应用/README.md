@@ -93,18 +93,18 @@
 ## 📖 子模块
 
 ### LangChain生态系统
-1. [LangChain完整教程](01-LangChain生态/LangChain-完整教程.md) 🔥
-2. [LangGraph完整教程](01-LangChain生态/LangGraph-完整教程.md) 🔥
-3. [LangSmith完整教程](01-LangChain生态/LangSmith-完整教程.md)
-4. [LangServe完整教程](01-LangChain生态/LangServe-完整教程.md)
-5. [LangChain Hub完整教程](01-LangChain生态/LangChain-Hub-完整教程.md)
+1. [LangChain完整教程](01-LangChain生态/LangChain-完整教程.md) 🔥 ✅
+2. [LangGraph完整教程](01-LangChain生态/LangGraph-完整教程.md) 🔥 ✅
+3. [LangSmith完整教程](01-LangChain生态/LangSmith-完整教程.md) ✅
+4. [LangServe完整教程](01-LangChain生态/LangServe-完整教程.md) ⭕ 待补充
+5. [LangChain Hub完整教程](01-LangChain生态/LangChain-Hub-完整教程.md) ⭕ 待补充
 
 ### 其他框架和工具
-6. [LlamaIndex完整教程](LlamaIndex-完整教程.md)
-7. [OpenAI API完整教程](OpenAI-API-完整教程.md)
-8. [Hugging Face完整教程](Hugging-Face-完整教程.md)
-9. [Prompt Engineering完整教程](Prompt-Engineering-完整教程.md)
-10. [RAG应用开发完整教程](RAG应用开发-完整教程.md)
+6. [LlamaIndex完整教程](LlamaIndex-完整教程.md) ⭕ 待补充
+7. [OpenAI API完整教程](OpenAI-API-完整教程.md) ⭕ 待补充
+8. [Hugging Face完整教程](Hugging-Face-完整教程.md) ⭕ 待补充
+9. [Prompt Engineering完整教程](Prompt-Engineering-完整教程.md) ⭕ 待补充
+10. [RAG应用开发完整教程](RAG应用开发-完整教程.md) ⭕ 待补充
 
 ## ⏱️ 预计学习时长
 

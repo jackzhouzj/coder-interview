@@ -52,11 +52,11 @@
 
 ## 📖 子模块
 
-1. [Goroutine完整教程](Goroutine-完整教程.md)
-2. [Channel完整教程](Channel-完整教程.md)
-3. [并发模式完整教程](并发模式-完整教程.md)
-4. [同步原语完整教程](同步原语-完整教程.md)
-5. [Context完整教程](Context-完整教程.md)
+1. [Goroutine完整教程](Goroutine-完整教程.md) ✅
+2. [Channel完整教程](Channel-完整教程.md) ✅
+3. [并发模式完整教程](并发模式-完整教程.md) ⭕ 待补充
+4. [同步原语完整教程](同步原语-完整教程.md) ⭕ 待补充
+5. [Context完整教程](Context-完整教程.md) ✅
 
 ## ⏱️ 预计学习时长
 

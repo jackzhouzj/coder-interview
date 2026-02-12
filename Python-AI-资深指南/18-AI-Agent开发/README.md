@@ -46,11 +46,11 @@
 
 ## 📖 子模块
 
-1. [AutoGPT完整教程](AutoGPT-完整教程.md)
-2. [BabyAGI完整教程](BabyAGI-完整教程.md)
-3. [CrewAI完整教程](CrewAI-完整教程.md) 🔥
-4. [Agent协作框架完整教程](Agent协作框架-完整教程.md)
-5. [自主Agent设计完整教程](自主Agent设计-完整教程.md)
+1. [AutoGPT完整教程](AutoGPT-完整教程.md) ⭕ 待补充
+2. [BabyAGI完整教程](BabyAGI-完整教程.md) ⭕ 待补充
+3. [CrewAI完整教程](CrewAI-完整教程.md) 🔥 ✅
+4. [Agent协作框架完整教程](Agent协作框架-完整教程.md) ⭕ 待补充
+5. [自主Agent设计完整教程](自主Agent设计-完整教程.md) ⭕ 待补充
 
 ## ⏱️ 预计学习时长
 

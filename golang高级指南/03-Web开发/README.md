@@ -51,11 +51,11 @@
 
 ## 📖 子模块
 
-1. [HTTP服务开发完整教程](HTTP服务开发-完整教程.md)
-2. [Gin框架完整教程](Gin框架-完整教程.md)
-3. [中间件开发完整教程](中间件开发-完整教程.md)
-4. [RESTful API设计完整教程](RESTful-API设计-完整教程.md)
-5. [WebSocket完整教程](WebSocket-完整教程.md)
+1. [HTTP服务开发完整教程](HTTP服务开发-完整教程.md) ⭕ 待补充
+2. [Gin框架完整教程](Gin框架-完整教程.md) ✅
+3. [中间件开发完整教程](中间件开发-完整教程.md) ⭕ 待补充
+4. [RESTful API设计完整教程](RESTful-API设计-完整教程.md) ⭕ 待补充
+5. [WebSocket完整教程](WebSocket-完整教程.md) ⭕ 待补充
 
 ## ⏱️ 预计学习时长
 
