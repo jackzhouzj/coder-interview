@@ -43,9 +43,9 @@
 
 1. [NumPy完整教程](NumPy-完整教程.md) ✅
 2. [Pandas完整教程](Pandas-完整教程.md) ✅
-3. [Matplotlib完整教程](Matplotlib-完整教程.md) ⭕ 待补充
-4. [Seaborn完整教程](Seaborn-完整教程.md) ⭕ 待补充
-5. [数据预处理完整教程](数据预处理-完整教程.md) ⭕ 待补充
+3. [Matplotlib完整教程](Matplotlib-完整教程.md) ✅
+4. [Seaborn完整教程](Seaborn-完整教程.md) ✅
+5. [数据预处理完整教程](数据预处理-完整教程.md) ✅
 
 ## ⏱️ 预计学习时长
 

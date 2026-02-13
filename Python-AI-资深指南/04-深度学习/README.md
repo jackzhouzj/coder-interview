@@ -60,13 +60,13 @@
 
 ## 📖 子模块
 
-1. [PyTorch完整教程](PyTorch-完整教程.md) 🔥 ⭕ 待补充
-2. [TensorFlow完整教程](TensorFlow-完整教程.md) ⭕ 待补充
-3. [Keras完整教程](Keras-完整教程.md) ⭕ 待补充
-4. [神经网络基础完整教程](神经网络基础-完整教程.md) ⭕ 待补充
-5. [CNN完整教程](CNN-完整教程.md) ⭕ 待补充
-6. [RNN完整教程](RNN-完整教程.md) ⭕ 待补充
-7. [Transformer完整教程](Transformer-完整教程.md) ⭕ 待补充
+1. [PyTorch完整教程](PyTorch-完整教程.md) 🔥 ✅ 已完成
+2. [TensorFlow完整教程](TensorFlow-完整教程.md) ✅ 已完成
+3. [Keras完整教程](Keras-完整教程.md) ✅ 已完成
+4. [神经网络基础完整教程](神经网络基础-完整教程.md) ✅ 已完成
+5. [CNN完整教程](CNN-完整教程.md) ✅ 已完成
+6. [RNN完整教程](RNN-完整教程.md) ✅ 已完成
+7. [Transformer完整教程](Transformer-完整教程.md) ✅ 已完成
 
 ## ⏱️ 预计学习时长
 

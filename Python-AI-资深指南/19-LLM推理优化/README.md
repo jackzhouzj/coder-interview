@@ -47,10 +47,10 @@
 ## 📖 子模块
 
 1. [vLLM完整教程](vLLM-完整教程.md) 🔥 ✅
-2. [Text Generation Inference完整教程](Text-Generation-Inference-完整教程.md) ⭕ 待补充
-3. [llama.cpp完整教程](llama.cpp-完整教程.md) ⭕ 待补充
-4. [推理加速技术完整教程](推理加速技术-完整教程.md) ⭕ 待补充
-5. [批处理优化完整教程](批处理优化-完整教程.md) ⭕ 待补充
+2. [Text Generation Inference完整教程](Text-Generation-Inference-完整教程.md) ✅
+3. [llama.cpp完整教程](llama.cpp-完整教程.md) ✅
+4. [推理加速技术完整教程](推理加速技术-完整教程.md) ✅
+5. [批处理优化完整教程](批处理优化-完整教程.md) ✅
 
 ## ⏱️ 预计学习时长
 

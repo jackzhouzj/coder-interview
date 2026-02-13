@@ -96,28 +96,30 @@
 1. [LangChain完整教程](01-LangChain生态/LangChain-完整教程.md) 🔥 ✅
 2. [LangGraph完整教程](01-LangChain生态/LangGraph-完整教程.md) 🔥 ✅
 3. [LangSmith完整教程](01-LangChain生态/LangSmith-完整教程.md) ✅
-4. [LangServe完整教程](01-LangChain生态/LangServe-完整教程.md) ⭕ 待补充
-5. [LangChain Hub完整教程](01-LangChain生态/LangChain-Hub-完整教程.md) ⭕ 待补充
+4. [LangServe完整教程](01-LangChain生态/LangServe-完整教程.md) ✅
+5. [LangChain Hub完整教程](01-LangChain生态/LangChain-Hub-完整教程.md) ✅
 
 ### 其他框架和工具
-6. [LlamaIndex完整教程](LlamaIndex-完整教程.md) ⭕ 待补充
-7. [OpenAI API完整教程](OpenAI-API-完整教程.md) ⭕ 待补充
-8. [Hugging Face完整教程](Hugging-Face-完整教程.md) ⭕ 待补充
-9. [Prompt Engineering完整教程](Prompt-Engineering-完整教程.md) ⭕ 待补充
-10. [RAG应用开发完整教程](RAG应用开发-完整教程.md) ⭕ 待补充
+6. [LlamaIndex完整教程](LlamaIndex-完整教程.md) ✅
+7. [OpenAI API完整教程](OpenAI-API-完整教程.md) 🔥 ✅
+8. [Hugging Face完整教程](Hugging-Face-完整教程.md) ✅
+9. [Prompt Engineering完整教程](Prompt-Engineering-完整教程.md) 🔥 ✅
+10. [RAG应用开发完整教程](RAG应用开发-完整教程.md) 🔥 ✅
 
 ## ⏱️ 预计学习时长
 
-- LangChain生态：50-70小时
+- LangChain生态：70-100小时
   - LangChain：30-40小时
   - LangGraph：15-20小时
   - LangSmith：5-10小时
+  - LangServe：10-15小时
+  - LangChain Hub：10-15小时
 - LlamaIndex：20-30小时
 - OpenAI API：15-25小时
 - Hugging Face：25-35小时
-- Prompt Engineering：15-25小时
+- Prompt Engineering：20-30小时
 - RAG应用开发：30-40小时
-- 总计：155-225小时
+- 总计：180-260小时
 
 ## 📝 前置知识
 
