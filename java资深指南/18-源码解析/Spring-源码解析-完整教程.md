@@ -752,3 +752,627 @@ protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) 
 }
 ```
 
+### 5.3 JDK 动态代理 vs CGLIB 代理
+
+```java
+// DefaultAopProxyFactory.createAopProxy()
+@Override
+public AopProxy createAopProxy(AdvisedSupport config) throws AopConfigException {
+    if (config.isOptimize() || config.isProxyTargetClass() || hasNoUserSuppliedProxyInterfaces(config)) {
+        Class<?> targetClass = config.getTargetClass();
+        if (targetClass == null) {
+            throw new AopConfigException("TargetSource cannot determine target class: " +
+                "Either an interface or a target is required for proxy creation.");
+        }
+        // 如果目标类是接口或者已经是代理类，使用 JDK 动态代理
+        if (targetClass.isInterface() || Proxy.isProxyClass(targetClass)) {
+            return new JdkDynamicAopProxy(config);
+        }
+        // 否则使用 CGLIB 代理
+        return new ObjenesisCglibAopProxy(config);
+    } else {
+        // 默认使用 JDK 动态代理
+        return new JdkDynamicAopProxy(config);
+    }
+}
+
+// JDK 动态代理
+final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializable {
+    
+    @Override
+    public Object getProxy(@Nullable ClassLoader classLoader) {
+        Class<?>[] proxiedInterfaces = AopProxyUtils.completeProxiedInterfaces(this.advised, true);
+        findDefinedEqualsAndHashCodeMethods(proxiedInterfaces);
+        return Proxy.newProxyInstance(classLoader, proxiedInterfaces, this);
+    }
+    
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        Object oldProxy = null;
+        boolean setProxyContext = false;
+        
+        TargetSource targetSource = this.advised.targetSource;
+        Object target = null;
+        
+        try {
+            // 获取拦截器链
+            List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
+            
+            if (chain.isEmpty()) {
+                // 没有拦截器，直接调用目标方法
+                Object[] argsToUse = AopProxyUtils.adaptArgumentsIfNecessary(method, args);
+                retVal = AopUtils.invokeJoinpointUsingReflection(target, method, argsToUse);
+            } else {
+                // 创建方法调用
+                MethodInvocation invocation = new ReflectiveMethodInvocation(
+                    proxy, target, method, args, targetClass, chain);
+                // 执行拦截器链
+                retVal = invocation.proceed();
+            }
+            
+            return retVal;
+        } finally {
+            if (target != null && !targetSource.isStatic()) {
+                targetSource.releaseTarget(target);
+            }
+            if (setProxyContext) {
+                AopContext.setCurrentProxy(oldProxy);
+            }
+        }
+    }
+}
+```
+
+---
+
+## 6. 事务管理机制 🔥
+
+### 6.1 事务管理器
+
+```java
+// PlatformTransactionManager 接口
+public interface PlatformTransactionManager extends TransactionManager {
+    // 获取事务
+    TransactionStatus getTransaction(@Nullable TransactionDefinition definition) 
+        throws TransactionException;
+    
+    // 提交事务
+    void commit(TransactionStatus status) throws TransactionException;
+    
+    // 回滚事务
+    void rollback(TransactionStatus status) throws TransactionException;
+}
+
+// DataSourceTransactionManager
+public class DataSourceTransactionManager extends AbstractPlatformTransactionManager 
+    implements ResourceTransactionManager, InitializingBean {
+    
+    @Override
+    protected void doBegin(Object transaction, TransactionDefinition definition) {
+        DataSourceTransactionObject txObject = (DataSourceTransactionObject) transaction;
+        Connection con = null;
+        
+        try {
+            if (!txObject.hasConnectionHolder() ||
+                txObject.getConnectionHolder().isSynchronizedWithTransaction()) {
+                // 获取数据库连接
+                Connection newCon = obtainDataSource().getConnection();
+                txObject.setConnectionHolder(new ConnectionHolder(newCon), true);
+            }
+            
+            txObject.getConnectionHolder().setSynchronizedWithTransaction(true);
+            con = txObject.getConnectionHolder().getConnection();
+            
+            // 设置隔离级别
+            Integer previousIsolationLevel = DataSourceUtils.prepareConnectionForTransaction(con, definition);
+            txObject.setPreviousIsolationLevel(previousIsolationLevel);
+            txObject.setReadOnly(definition.isReadOnly());
+            
+            // 关闭自动提交
+            if (con.getAutoCommit()) {
+                txObject.setMustRestoreAutoCommit(true);
+                con.setAutoCommit(false);
+            }
+            
+            // 绑定连接到线程
+            if (txObject.isNewConnectionHolder()) {
+                TransactionSynchronizationManager.bindResource(obtainDataSource(), txObject.getConnectionHolder());
+            }
+        } catch (Throwable ex) {
+            if (txObject.isNewConnectionHolder()) {
+                DataSourceUtils.releaseConnection(con, obtainDataSource());
+                txObject.setConnectionHolder(null, false);
+            }
+            throw new CannotCreateTransactionException("Could not open JDBC Connection for transaction", ex);
+        }
+    }
+    
+    @Override
+    protected void doCommit(DefaultTransactionStatus status) {
+        DataSourceTransactionObject txObject = (DataSourceTransactionObject) status.getTransaction();
+        Connection con = txObject.getConnectionHolder().getConnection();
+        try {
+            con.commit();
+        } catch (SQLException ex) {
+            throw new TransactionSystemException("Could not commit JDBC transaction", ex);
+        }
+    }
+    
+    @Override
+    protected void doRollback(DefaultTransactionStatus status) {
+        DataSourceTransactionObject txObject = (DataSourceTransactionObject) status.getTransaction();
+        Connection con = txObject.getConnectionHolder().getConnection();
+        try {
+            con.rollback();
+        } catch (SQLException ex) {
+            throw new TransactionSystemException("Could not roll back JDBC transaction", ex);
+        }
+    }
+}
+```
+
+### 6.2 @Transactional 注解处理
+
+```java
+// TransactionInterceptor - 事务拦截器
+public class TransactionInterceptor extends TransactionAspectSupport implements MethodInterceptor, Serializable {
+    
+    @Override
+    @Nullable
+    public Object invoke(MethodInvocation invocation) throws Throwable {
+        Class<?> targetClass = (invocation.getThis() != null ? 
+            AopUtils.getTargetClass(invocation.getThis()) : null);
+        
+        // 执行事务方法
+        return invokeWithinTransaction(invocation.getMethod(), targetClass, invocation::proceed);
+    }
+}
+
+// TransactionAspectSupport.invokeWithinTransaction()
+@Nullable
+protected Object invokeWithinTransaction(Method method, @Nullable Class<?> targetClass,
+    final InvocationCallback invocation) throws Throwable {
+    
+    // 获取事务属性
+    TransactionAttributeSource tas = getTransactionAttributeSource();
+    final TransactionAttribute txAttr = (tas != null ? tas.getTransactionAttribute(method, targetClass) : null);
+    final TransactionManager tm = determineTransactionManager(txAttr);
+    
+    PlatformTransactionManager ptm = asPlatformTransactionManager(tm);
+    final String joinpointIdentification = methodIdentification(method, targetClass, txAttr);
+    
+    if (txAttr == null || !(ptm instanceof CallbackPreferringPlatformTransactionManager)) {
+        // 标准事务处理
+        TransactionInfo txInfo = createTransactionIfNecessary(ptm, txAttr, joinpointIdentification);
+        
+        Object retVal;
+        try {
+            // 执行目标方法
+            retVal = invocation.proceedWithInvocation();
+        } catch (Throwable ex) {
+            // 异常回滚
+            completeTransactionAfterThrowing(txInfo, ex);
+            throw ex;
+        } finally {
+            cleanupTransactionInfo(txInfo);
+        }
+        
+        // 提交事务
+        commitTransactionAfterReturning(txInfo);
+        return retVal;
+    }
+}
+```
+
+### 6.3 事务传播行为
+
+```java
+/**
+ * 事务传播行为
+ * 
+ * @author erik.zhou
+ */
+public enum Propagation {
+    // REQUIRED：如果当前存在事务，则加入该事务；如果当前没有事务，则创建一个新的事务
+    REQUIRED(TransactionDefinition.PROPAGATION_REQUIRED),
+    
+    // SUPPORTS：如果当前存在事务，则加入该事务；如果当前没有事务，则以非事务方式执行
+    SUPPORTS(TransactionDefinition.PROPAGATION_SUPPORTS),
+    
+    // MANDATORY：如果当前存在事务，则加入该事务；如果当前没有事务，则抛出异常
+    MANDATORY(TransactionDefinition.PROPAGATION_MANDATORY),
+    
+    // REQUIRES_NEW：创建一个新的事务，如果当前存在事务，则把当前事务挂起
+    REQUIRES_NEW(TransactionDefinition.PROPAGATION_REQUIRES_NEW),
+    
+    // NOT_SUPPORTED：以非事务方式执行操作，如果当前存在事务，则把当前事务挂起
+    NOT_SUPPORTED(TransactionDefinition.PROPAGATION_NOT_SUPPORTED),
+    
+    // NEVER：以非事务方式执行，如果当前存在事务，则抛出异常
+    NEVER(TransactionDefinition.PROPAGATION_NEVER),
+    
+    // NESTED：如果当前存在事务，则创建一个事务作为当前事务的嵌套事务来运行
+    NESTED(TransactionDefinition.PROPAGATION_NESTED);
+}
+
+// 示例
+@Service
+public class UserService {
+    
+    @Autowired
+    private OrderService orderService;
+    
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createUser(User user) {
+        // 保存用户
+        userDao.save(user);
+        
+        // 调用订单服务（加入当前事务）
+        orderService.createOrder(user.getId());
+    }
+}
+
+@Service
+public class OrderService {
+    
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createOrder(Long userId) {
+        // 创建新事务，即使 createUser 回滚，订单也会提交
+        Order order = new Order();
+        order.setUserId(userId);
+        orderDao.save(order);
+    }
+}
+```
+
+---
+
+## 7. Spring MVC 原理 🔥
+
+### 7.1 DispatcherServlet 请求处理流程
+
+```java
+// DispatcherServlet.doDispatch()
+protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    HttpServletRequest processedRequest = request;
+    HandlerExecutionChain mappedHandler = null;
+    boolean multipartRequestParsed = false;
+    
+    WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+    
+    try {
+        ModelAndView mv = null;
+        Exception dispatchException = null;
+        
+        try {
+            // 1. 检查是否是文件上传请求
+            processedRequest = checkMultipart(request);
+            multipartRequestParsed = (processedRequest != request);
+            
+            // 2. 根据请求找到 Handler（Controller 方法）
+            mappedHandler = getHandler(processedRequest);
+            if (mappedHandler == null) {
+                noHandlerFound(processedRequest, response);
+                return;
+            }
+            
+            // 3. 根据 Handler 找到 HandlerAdapter
+            HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+            
+            // 4. 执行拦截器的 preHandle 方法
+            if (!mappedHandler.applyPreHandle(processedRequest, response)) {
+                return;
+            }
+            
+            // 5. 执行 Handler（Controller 方法）
+            mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+            
+            if (asyncManager.isConcurrentHandlingStarted()) {
+                return;
+            }
+            
+            applyDefaultViewName(processedRequest, mv);
+            
+            // 6. 执行拦截器的 postHandle 方法
+            mappedHandler.applyPostHandle(processedRequest, response, mv);
+        } catch (Exception ex) {
+            dispatchException = ex;
+        }
+        
+        // 7. 处理结果（渲染视图）
+        processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
+    } catch (Exception ex) {
+        triggerAfterCompletion(processedRequest, response, mappedHandler, ex);
+    } finally {
+        if (asyncManager.isConcurrentHandlingStarted()) {
+            if (mappedHandler != null) {
+                mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);
+            }
+        } else {
+            if (multipartRequestParsed) {
+                cleanupMultipart(processedRequest);
+            }
+        }
+    }
+}
+```
+
+### 7.2 HandlerMapping 映射处理
+
+```java
+// RequestMappingHandlerMapping
+public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMapping 
+    implements MatchableHandlerMapping, EmbeddedValueResolverAware {
+    
+    @Override
+    protected HandlerMethod getHandlerInternal(HttpServletRequest request) throws Exception {
+        // 获取请求路径
+        String lookupPath = initLookupPath(request);
+        this.mappingRegistry.acquireReadLock();
+        try {
+            // 查找匹配的 Handler
+            HandlerMethod handlerMethod = lookupHandlerMethod(lookupPath, request);
+            return (handlerMethod != null ? handlerMethod.createWithResolvedBean() : null);
+        } finally {
+            this.mappingRegistry.releaseReadLock();
+        }
+    }
+    
+    @Nullable
+    protected HandlerMethod lookupHandlerMethod(String lookupPath, HttpServletRequest request) 
+        throws Exception {
+        List<Match> matches = new ArrayList<>();
+        // 直接匹配
+        List<T> directPathMatches = this.mappingRegistry.getMappingsByDirectPath(lookupPath);
+        if (directPathMatches != null) {
+            addMatchingMappings(directPathMatches, matches, request);
+        }
+        if (matches.isEmpty()) {
+            // 模式匹配
+            addMatchingMappings(this.mappingRegistry.getRegistrations().keySet(), matches, request);
+        }
+        
+        if (!matches.isEmpty()) {
+            Match bestMatch = matches.get(0);
+            if (matches.size() > 1) {
+                Comparator<Match> comparator = new MatchComparator(getMappingComparator(request));
+                matches.sort(comparator);
+                bestMatch = matches.get(0);
+            }
+            request.setAttribute(BEST_MATCHING_HANDLER_ATTRIBUTE, bestMatch.getHandlerMethod());
+            handleMatch(bestMatch.mapping, lookupPath, request);
+            return bestMatch.getHandlerMethod();
+        } else {
+            return handleNoMatch(this.mappingRegistry.getRegistrations().keySet(), lookupPath, request);
+        }
+    }
+}
+```
+
+### 7.3 参数解析和返回值处理
+
+```java
+// RequestMappingHandlerAdapter.invokeHandlerMethod()
+@Nullable
+protected ModelAndView invokeHandlerMethod(HttpServletRequest request,
+    HttpServletResponse response, HandlerMethod handlerMethod) throws Exception {
+    
+    ServletWebRequest webRequest = new ServletWebRequest(request, response);
+    try {
+        WebDataBinderFactory binderFactory = getDataBinderFactory(handlerMethod);
+        ModelFactory modelFactory = getModelFactory(handlerMethod, binderFactory);
+        
+        ServletInvocableHandlerMethod invocableMethod = createInvocableHandlerMethod(handlerMethod);
+        if (this.argumentResolvers != null) {
+            // 设置参数解析器
+            invocableMethod.setHandlerMethodArgumentResolvers(this.argumentResolvers);
+        }
+        if (this.returnValueHandlers != null) {
+            // 设置返回值处理器
+            invocableMethod.setHandlerMethodReturnValueHandlers(this.returnValueHandlers);
+        }
+        invocableMethod.setDataBinderFactory(binderFactory);
+        invocableMethod.setParameterNameDiscoverer(this.parameterNameDiscoverer);
+        
+        ModelAndViewContainer mavContainer = new ModelAndViewContainer();
+        mavContainer.addAllAttributes(RequestContextUtils.getInputFlashMap(request));
+        modelFactory.initModel(webRequest, mavContainer, invocableMethod);
+        mavContainer.setIgnoreDefaultModelOnRedirect(this.ignoreDefaultModelOnRedirect);
+        
+        // 执行方法
+        invocableMethod.invokeAndHandle(webRequest, mavContainer);
+        if (asyncManager.isConcurrentHandlingStarted()) {
+            return null;
+        }
+        
+        return getModelAndView(mavContainer, modelFactory, webRequest);
+    } finally {
+        webRequest.requestCompleted();
+    }
+}
+```
+
+---
+
+## 8. 设计模式应用
+
+### 8.1 工厂模式
+
+```java
+// BeanFactory - 工厂模式
+public interface BeanFactory {
+    Object getBean(String name) throws BeansException;
+    <T> T getBean(Class<T> requiredType) throws BeansException;
+}
+
+// FactoryBean - 工厂 Bean
+public interface FactoryBean<T> {
+    @Nullable
+    T getObject() throws Exception;
+    @Nullable
+    Class<?> getObjectType();
+    default boolean isSingleton() {
+        return true;
+    }
+}
+```
+
+### 8.2 单例模式
+
+```java
+// DefaultSingletonBeanRegistry
+public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry {
+    // 单例对象缓存
+    private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
+    
+    @Override
+    public Object getSingleton(String beanName) {
+        return getSingleton(beanName, true);
+    }
+    
+    protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+        // 从缓存获取
+        Object singletonObject = this.singletonObjects.get(beanName);
+        if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
+            // 从早期引用缓存获取（解决循环依赖）
+            singletonObject = this.earlySingletonObjects.get(beanName);
+            if (singletonObject == null && allowEarlyReference) {
+                synchronized (this.singletonObjects) {
+                    singletonObject = this.singletonObjects.get(beanName);
+                    if (singletonObject == null) {
+                        singletonObject = this.earlySingletonObjects.get(beanName);
+                        if (singletonObject == null) {
+                            ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
+                            if (singletonFactory != null) {
+                                singletonObject = singletonFactory.getObject();
+                                this.earlySingletonObjects.put(beanName, singletonObject);
+                                this.singletonFactories.remove(beanName);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return singletonObject;
+    }
+}
+```
+
+### 8.3 模板方法模式
+
+```java
+// AbstractApplicationContext.refresh() - 模板方法
+@Override
+public void refresh() throws BeansException, IllegalStateException {
+    synchronized (this.startupShutdownMonitor) {
+        // 1. 准备刷新
+        prepareRefresh();
+        
+        // 2. 获取 BeanFactory
+        ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+        
+        // 3. 准备 BeanFactory
+        prepareBeanFactory(beanFactory);
+        
+        try {
+            // 4. 后置处理 BeanFactory（子类扩展点）
+            postProcessBeanFactory(beanFactory);
+            
+            // 5. 执行 BeanFactoryPostProcessor
+            invokeBeanFactoryPostProcessors(beanFactory);
+            
+            // 6. 注册 BeanPostProcessor
+            registerBeanPostProcessors(beanFactory);
+            
+            // 7. 初始化消息源
+            initMessageSource();
+            
+            // 8. 初始化事件广播器
+            initApplicationEventMulticaster();
+            
+            // 9. 刷新（子类扩展点）
+            onRefresh();
+            
+            // 10. 注册监听器
+            registerListeners();
+            
+            // 11. 实例化所有非懒加载的单例 Bean
+            finishBeanFactoryInitialization(beanFactory);
+            
+            // 12. 完成刷新
+            finishRefresh();
+        } catch (BeansException ex) {
+            destroyBeans();
+            cancelRefresh(ex);
+            throw ex;
+        } finally {
+            resetCommonCaches();
+        }
+    }
+}
+```
+
+### 8.4 观察者模式
+
+```java
+// ApplicationEvent - 事件
+public abstract class ApplicationEvent extends EventObject {
+    private final long timestamp;
+    
+    public ApplicationEvent(Object source) {
+        super(source);
+        this.timestamp = System.currentTimeMillis();
+    }
+}
+
+// ApplicationListener - 监听器
+@FunctionalInterface
+public interface ApplicationListener<E extends ApplicationEvent> extends EventListener {
+    void onApplicationEvent(E event);
+}
+
+// ApplicationEventPublisher - 事件发布器
+@FunctionalInterface
+public interface ApplicationEventPublisher {
+    default void publishEvent(ApplicationEvent event) {
+        publishEvent((Object) event);
+    }
+    
+    void publishEvent(Object event);
+}
+
+// 使用示例
+@Component
+public class UserCreatedListener implements ApplicationListener<UserCreatedEvent> {
+    @Override
+    public void onApplicationEvent(UserCreatedEvent event) {
+        System.out.println("用户创建事件：" + event.getUser().getName());
+    }
+}
+```
+
+---
+
+## 9. 总结
+
+Spring 框架的核心原理：
+
+1. **IoC 容器**：通过反射和工厂模式管理 Bean 的生命周期
+2. **依赖注入**：通过构造器、Setter、字段注入实现依赖关系
+3. **AOP**：基于动态代理实现横切关注点的模块化
+4. **事务管理**：通过 AOP 和 ThreadLocal 实现声明式事务
+5. **MVC 框架**：通过 DispatcherServlet 统一处理请求
+
+掌握这些核心原理，可以帮助我们：
+- 更好地使用 Spring 框架
+- 排查和解决复杂问题
+- 进行性能优化和扩展开发
+
+---
+
+## 📚 参考资料
+
+- [Spring Framework 官方文档](https://docs.spring.io/spring-framework/docs/current/reference/html/)
+- [Spring Framework GitHub](https://github.com/spring-projects/spring-framework)
+- 《Spring 源码深度解析》
+- 《Spring 技术内幕》
