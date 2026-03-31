@@ -82,6 +82,16 @@
 - 答案生成和后处理
 - 评估和优化
 
+### 7. 高级RAG技术 🔥 新增
+- GraphRAG（知识图谱增强RAG）
+- Agentic RAG（Agent驱动的动态RAG）
+- Self-RAG（自我反思RAG）
+- 高级Chunking策略（语义切分/父子文档）
+- RAG评估框架（RAGAS）
+- 向量数据库选型指南
+- 多模态RAG
+- 生产级RAG架构设计
+
 ## 🎯 学习目标
 
 - [ ] 熟练使用LangChain开发LLM应用
@@ -105,6 +115,10 @@
 8. [Hugging Face完整教程](Hugging-Face-完整教程.md) ✅
 9. [Prompt Engineering完整教程](Prompt-Engineering-完整教程.md) 🔥 ✅
 10. [RAG应用开发完整教程](RAG应用开发-完整教程.md) 🔥 ✅
+11. [高级RAG技术完整教程](高级RAG技术-完整教程.md) 🔥 ✅ 新增
+12. [向量数据库实战完整教程](向量数据库实战-完整教程.md) 🔥 ✅ 新增
+13. [LLMOps可观测性完整教程](LLMOps可观测性-完整教程.md) 🔥 ✅ 新增
+14. [Langfuse可观测性完整教程](Langfuse-完整教程.md) ✅
 
 ## ⏱️ 预计学习时长
 

@@ -155,6 +155,10 @@
 - [Hugging Face](./05-大模型应用/Hugging-Face-完整教程.md)
 - [Prompt Engineering](./05-大模型应用/Prompt-Engineering-完整教程.md)
 - [RAG应用开发](./05-大模型应用/RAG应用开发-完整教程.md)
+- [高级RAG技术](./05-大模型应用/高级RAG技术-完整教程.md) 🔥 新增
+- [向量数据库实战](./05-大模型应用/向量数据库实战-完整教程.md) 🔥 新增
+- [LLMOps可观测性](./05-大模型应用/LLMOps可观测性-完整教程.md) 🔥 新增
+- [Langfuse可观测性](./05-大模型应用/Langfuse-完整教程.md)
 
 ### [06-工程化规范](./06-工程化规范/) 🔥 新增
 - [Python 编码规范](./06-工程化规范/Python编码规范-完整教程.md) 🔥
@@ -292,11 +296,19 @@
 - [多模态模型应用](./17-多模态AI/多模态模型应用-完整教程.md)
 
 ### [18-AI-Agent开发](./18-AI-Agent开发/) 🔥
+- [OpenAI Agents SDK](./18-AI-Agent开发/OpenAI-Agents-SDK-完整教程.md) 🔥 新增
+- [MCP协议开发](./18-AI-Agent开发/MCP协议开发-完整教程.md) 🔥 新增
+- [A2A协议与Google ADK](./18-AI-Agent开发/A2A协议与Google-ADK-完整教程.md) 🔥 新增
+- [Agent记忆系统](./18-AI-Agent开发/Agent记忆系统-完整教程.md) 🔥 新增
+- [Function Calling与工具使用](./18-AI-Agent开发/Function-Calling与工具使用-完整教程.md) 🔥 新增
+- [Microsoft AutoGen](./18-AI-Agent开发/AutoGen-完整教程.md) 🔥 新增
+- [Dify平台实战](./18-AI-Agent开发/Dify平台实战-完整教程.md) 🔥 新增
+- [CrewAI](./18-AI-Agent开发/CrewAI-完整教程.md)
 - [AutoGPT](./18-AI-Agent开发/AutoGPT-完整教程.md)
 - [BabyAGI](./18-AI-Agent开发/BabyAGI-完整教程.md)
-- [CrewAI](./18-AI-Agent开发/CrewAI-完整教程.md)
 - [Agent协作框架](./18-AI-Agent开发/Agent协作框架-完整教程.md)
 - [自主Agent设计](./18-AI-Agent开发/自主Agent设计-完整教程.md)
+- [Agent评估与安全护栏](./18-AI-Agent开发/Agent评估与安全护栏-完整教程.md) 🔥 新增
 
 ### [19-LLM推理优化](./19-LLM推理优化/) 🔥
 - [vLLM](./19-LLM推理优化/vLLM-完整教程.md)
@@ -304,6 +316,7 @@
 - [llama.cpp](./19-LLM推理优化/llama.cpp-完整教程.md)
 - [推理加速技术](./19-LLM推理优化/推理加速技术-完整教程.md)
 - [批处理优化](./19-LLM推理优化/批处理优化-完整教程.md)
+- [GRPO与Unsloth微调](./19-LLM推理优化/GRPO与Unsloth微调-完整教程.md) 🔥 新增
 
 ### [20-数据工程](./20-数据工程/)
 - [Label Studio](./20-数据工程/Label-Studio-完整教程.md)
@@ -329,6 +342,7 @@
 - [常见陷阱与解决方案](./23-项目经验与最佳实践/常见陷阱-解决方案.md) 🔥
 - [线上问题排查手册](./23-项目经验与最佳实践/线上问题排查-手册.md) 🔥
 - [团队协作最佳实践](./23-项目经验与最佳实践/团队协作-最佳实践.md) 🔥
+- [RAG与Agent实战踩坑手册](./23-项目经验与最佳实践/RAG与Agent实战踩坑手册.md) 🔥 新增
 
 ## 🚀 快速开始
 
